@@ -6,30 +6,29 @@ import strutils
 import nativesockets
 
 when defined windows:
-  from windows import InAddr, inet_addr, setSockOpt
+  from winlean import In_Addr, inet_addr, setSockOpt
+  const IP_ADD_MEMBERSHIP  = 5.cint
+  const IP_DROP_MEMBERSHIP = 6.cint 
 else:
-  from posix import InAddr, inet_addr, setSockOpt
+  from posix import In_Addr, inet_addr, setSockOpt
+  const IP_ADD_MEMBERSHIP  = 35.cint
+  const IP_DROP_MEMBERSHIP = 36.cint  
 
 type 
   ip_mreq = object {.pure, final.}
     imr_multiaddr*: InAddr
     imr_interface*: InAddr
 
-const IP_ADD_MEMBERSHIP  = 35.cint
-const IP_DROP_MEMBERSHIP = 36.cint
-const IPPROTO_IP = 0.cint
-const HELLO_PORT = 12346
-const HELLO_GROUP = "225.0.0.39"
 
+const IPPROTO_IP = 0.cint
 
 proc joinGroup*(socket: Socket, group: string): bool = 
   ## Joins a multicast group
   ## return true if sucessfull
   ## false otherwise
   var mreq = ip_mreq()
-  mreq.imr_multiaddr.s_addr = inet_addr(HELLO_GROUP)
+  mreq.imr_multiaddr.s_addr = inet_addr(group)
   mreq.imr_interface.s_addr= htonl(INADDR_ANY)
-
   var res = setSockOpt(socket.getFd(), IPPROTO_IP, IP_ADD_MEMBERSHIP, addr mreq, sizeof(ip_mreq).SockLen)
   if res == 0: 
     return true
@@ -37,7 +36,9 @@ proc joinGroup*(socket: Socket, group: string): bool =
     return false
 
 when isMainModule:
-
+  const HELLO_PORT = 12346
+  const HELLO_GROUP = "225.0.0.39"
+  const MSG_LEN = 256
   var socket = newSocket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
   socket.setSockOpt(OptReuseAddr, true)
   socket.bindAddr(Port(HELLO_PORT))
@@ -46,7 +47,6 @@ when isMainModule:
     echo "could not join multicast group"
     quit()
 
-  const MSG_LEN = 256
   var 
     data: string = ""
     address: string = ""
