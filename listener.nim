@@ -7,8 +7,12 @@ import nativesockets
 
 when defined windows:
   from winlean import In_Addr, inet_addr, setSockOpt
-  const IP_ADD_MEMBERSHIP  = 5.cint
-  const IP_DROP_MEMBERSHIP = 6.cint 
+  # const IP_ADD_MEMBERSHIP  = 5.cint
+  # const IP_DROP_MEMBERSHIP = 6.cint 
+  # const IP_MULTICAST_TTL = 3.cint
+  const IP_ADD_MEMBERSHIP  = 12.cint
+  const IP_DROP_MEMBERSHIP = 13.cint  
+  const IP_MULTICAST_TTL = 10.cint  
 else:
   from posix import In_Addr, inet_addr, setSockOpt
   const IP_ADD_MEMBERSHIP  = 35.cint
@@ -77,7 +81,7 @@ Man:"ssdp:discover"
 MX:3""" & "\c\r\c\r" 
 
   
-  const MSG_LEN = 256
+  const MSG_LEN = 1024
   var socket = newSocket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
   socket.setSockOpt(OptReuseAddr, true)
   socket.bindAddr(Port(HELLO_PORT))
