@@ -3,7 +3,7 @@
 #                  nimMulticast
 #        (c) Copyright 2017 David Krause
 #
-#    See the file "copying.txt", included in this
+#    See the file "LICENSE", included in this
 #    distribution, for details about the copyright.
 #
 ## proc to let socket join a multicast group
@@ -61,7 +61,6 @@ proc joinGroup*(socket: Socket, group: string, ttl = 255): bool =
   return true
 
 proc leaveGroup*(socket: Socket, group: string): bool =
-  # TODO test this!
   ## Instructs the os kernel to leave a multicast group.
   ## returns true if sucessfull
   ## false otherwise
@@ -79,7 +78,7 @@ when isMainModule:
   #const HELLO_PORT = 6771
   #const HELLO_GROUP = "239.192.152.143"
 
-  ## upnp router announcements
+  ## upnp router discovery
   const HELLO_PORT = 1900
   const HELLO_GROUP = "239.255.255.250"
 
@@ -89,13 +88,11 @@ ST:urn:schemas-upnp-org:device:InternetGatewayDevice:1
 Man:"ssdp:discover"
 MX:3""" & "\c\r\c\r" 
 
-  
+
   const MSG_LEN = 1024
   var socket = newSocket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
   socket.setSockOpt(OptReuseAddr, true)
   socket.bindAddr(Port(HELLO_PORT))
-
-  echo socket.leaveGroup(HELLO_GROUP)
 
   if not socket.joinGroup(HELLO_GROUP):
     echo "could not join multicast group"
@@ -107,7 +104,9 @@ MX:3""" & "\c\r\c\r"
     port: Port
 
   discard socket.sendTo(HELLO_GROUP, Port(HELLO_PORT), disc)
-  while true:
+  for idx in 0..1:
     echo "R: ", socket.recvFrom(data, MSG_LEN, address, port ), " ", address,":", port, " " , data
 
+  assert socket.leaveGroup(HELLO_GROUP) == true
+  assert socket.leaveGroup(HELLO_GROUP) == false # cause we have left the group
 

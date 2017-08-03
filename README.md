@@ -11,11 +11,11 @@ nimble install nimMulticast
 import net
 import nimMulticast
 
-## upnp router announcements
+## upnp router discovery
 const 
   HELLO_PORT = 1900
   HELLO_GROUP = "239.255.255.250" # router
-	MSG_LEN = 1024
+  MSG_LEN = 1024
 
 var 
   data: string = ""
@@ -42,11 +42,13 @@ MX:3""" & "\c\r\c\r"
 # To send to the multicast group just send to its address
 discard socket.sendTo(HELLO_GROUP, Port(HELLO_PORT), disc)
 
-# The socket is supposed to receive every upd datagram
+# The socket is supposed to receive every udp datagram
 # sent to the multicast group.
 while true:
   echo "R: ", socket.recvFrom(data, MSG_LEN, address, port ), " ", address,":", port, " " , data
 
+# Instruct the kernel to leave the group. 
+assert socket.leaveGroup(HELLO_GROUP) == true
 
 
 ```
