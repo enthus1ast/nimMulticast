@@ -5,7 +5,7 @@ import "../multicast"
 ## upnp router announcements
 const 
   HELLO_PORT = 1900
-  HELLO_GROUP = "239.255.255.250" # router
+  HELLO_GROUP = "239.255.255.250" # router announcement
   MSG_LEN = 1024
 
 var 
