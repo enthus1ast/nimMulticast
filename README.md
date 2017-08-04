@@ -11,10 +11,9 @@ nimble install nimMulticast
 import net
 import nimMulticast
 
-## upnp router discovery
 const 
   HELLO_PORT = 1900
-  HELLO_GROUP = "239.255.255.250" # router
+  HELLO_GROUP = "239.255.255.250" # router discovery
   MSG_LEN = 1024
 
 var 

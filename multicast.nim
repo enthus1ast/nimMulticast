@@ -9,7 +9,6 @@
 ## proc to let socket join a multicast group
 import net
 import os
-import strutils
 import nativesockets
 
 when defined windows:
@@ -108,5 +107,5 @@ MX:3""" & "\c\r\c\r"
     echo "R: ", socket.recvFrom(data, MSG_LEN, address, port ), " ", address,":", port, " " , data
 
   assert socket.leaveGroup(HELLO_GROUP) == true
-  assert socket.leaveGroup(HELLO_GROUP) == false # cause we have left the group
+  assert socket.leaveGroup(HELLO_GROUP) == false # cause we have left the group already
 
