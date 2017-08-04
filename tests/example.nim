@@ -1,5 +1,4 @@
 import net
-# import nimMulticast
 import "../multicast"
 
 ## upnp router announcements

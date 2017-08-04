@@ -3,13 +3,13 @@ procs to join and leave a multicast group
 
 # installation
 ```bash
-nimble install nimMulticast
+nimble install multicast
 ```
 
 # usage:
 ```nim
 import net
-import nimMulticast
+import multicast
 
 const 
   HELLO_PORT = 1900
