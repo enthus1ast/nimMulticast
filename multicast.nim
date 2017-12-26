@@ -71,6 +71,10 @@ proc leaveGroup*(socket: Socket, group: string): bool =
     return false
   return true
 
+proc enableBroadcast*(socket: Socket, enable: bool) =
+  ## enables the socket for broadcast
+  let broadcastEnable = if enable: 1 else: 0
+  setsockoptint(socket.getFd(), SOL_SOCKET.int, SO_BROADCAST.int,  broadcastEnable);  
 
 when isMainModule:
   ## Bittorrent local peer discovery
@@ -95,7 +99,11 @@ MX:3""" & "\c\r\c\r"
 
   if not socket.joinGroup(HELLO_GROUP):
     echo "could not join multicast group"
-    quit()
+    # quit()
+
+
+  socket.enableBroadcast true
+  echo "enabled broadcast for the socket"
 
   var 
     data: string = ""
@@ -103,7 +111,9 @@ MX:3""" & "\c\r\c\r"
     port: Port
 
   discard socket.sendTo(HELLO_GROUP, Port(HELLO_PORT), disc)
-  for idx in 0..1:
+  discard socket.sendTo("255.255.255.255", Port(HELLO_PORT),  disc & "\nBROADCAST: truefoo")
+  # for idx in 0..1
+  while true:
     echo "R: ", socket.recvFrom(data, MSG_LEN, address, port ), " ", address,":", port, " " , data
 
   assert socket.leaveGroup(HELLO_GROUP) == true
