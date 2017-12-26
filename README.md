@@ -6,6 +6,11 @@ procs to join and leave a multicast group
 nimble install multicast
 ```
 
+or 
+```bash
+nimble install https://github.com/enthus1ast/nimMulticast
+```
+
 # usage:
 ```nim
 import net
