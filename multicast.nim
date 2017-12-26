@@ -99,8 +99,6 @@ MX:3""" & "\c\r\c\r"
 
   if not socket.joinGroup(HELLO_GROUP):
     echo "could not join multicast group"
-    # quit()
-
 
   socket.enableBroadcast true
   echo "enabled broadcast for the socket"

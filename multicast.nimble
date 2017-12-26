@@ -1,8 +1,8 @@
 # Package
 
-version       = "0.1.0"
+version       = "0.1.1"
 author        = "enthus1ast"
-description   = "join and leave multicast groups"
+description   = "join and leave multicast groups / broadcast"
 license       = "MIT"
 
 # Dependencies
