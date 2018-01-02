@@ -46,6 +46,7 @@ MX:3""" & "\c\r\c\r"
 
 # Socket is still a "normal" socket.
 # To send to the multicast group just send to its address
+# Sending sockets must not be in the multicast group
 discard socket.sendTo(HELLO_GROUP, Port(HELLO_PORT), disc)
 
 # The socket is supposed to receive every udp datagram
