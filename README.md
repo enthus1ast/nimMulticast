@@ -35,7 +35,7 @@ if not socket.joinGroup(HELLO_GROUP):
   quit()
 
 socket.enableBroadcast true
-echo "enabled broadcast for the socket"
+echo "enabled broadcast for the socket, this is not needet for only multicast!"
 
 # For testing we speak upnp manually
 var disc = """M-SEARCH * HTTP/1.1
