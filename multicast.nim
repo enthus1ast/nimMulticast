@@ -25,7 +25,7 @@ when defined windows:
     IP_DROP_MEMBERSHIP = 13.cint  
     IP_MULTICAST_TTL = 10.cint  
     IPV6_JOIN_GROUP = 12.cint # TODO
-    IPV6_LEAVE_GROUP = 13 # TODO
+    IPV6_LEAVE_GROUP = 13.cint # TODO
 else:
   from posix import In_Addr, inet_addr, setSockOpt, In6Addr, 
     IPV6_JOIN_GROUP, IPV6_LEAVE_GROUP, inet_pton # , Tipv6_mreq
@@ -126,7 +126,7 @@ proc leaveGroup*(socket: Socket, ipAddr: IpAddress): bool =
     var mreq6 = ipv6_mreq()
     mreq6.ipv6mr_multiaddr.s6_addr = cast[array[0..15, char]](ipAddr.address_v6)
     mreq6.ipv6mr_interface =  0 # let os choose right interface; TODO?
-    var res = setSockOpt(socket.getFd(), IPPROTO_IP, IP_DROP_MEMBERSHIP, addr mreq6, sizeof(ipv6_mreq).SockLen)
+    var res = setSockOpt(socket.getFd(), IPPROTO_IPV6, IPV6_LEAVE_GROUP, addr mreq6, sizeof(ipv6_mreq).SockLen)
     if res != 0: 
       return false
     return true
@@ -201,6 +201,8 @@ when isMainModule: # ipv6 test
     port: Port
 
   echo socket.sendTo("ff02::2", Port 1900, "TESTDATA")
+  sleep 5000
+  echo socket.leaveGroup("ff02::2")
   while true:
       echo "R: ", socket.recvFrom(data, 1024, address, port ), " ", address,":", port, " " , data
 
