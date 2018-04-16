@@ -6,7 +6,7 @@
 #    See the file "LICENSE", included in this
 #    distribution, for details about the copyright.
 #
-## proc to let socket join a multicast group
+## procs to work with multicast groups and ip broadcast
 import net
 import os
 import nativesockets
@@ -34,6 +34,29 @@ type
     imr_interface*: InAddr
 
 const IPPROTO_IP = 0.cint
+
+proc isMulticastAddress*(ipAddr: IpAddress): bool =
+  ## returns true wether the given group is a ipv4 multicast
+  ## address, false otherwise
+  ## Examples:
+  ##
+  # runnableExamples:
+  #   doAssert "224.0.0.0".isMulticastAddress == true
+  #   doAssert "239.2.3.4".isMulticastAddress == true
+  #   doAssert "239.255.255.255".isMulticastAddress == true
+  #   doAssert "192.168.2.1".isMulticastAddress == false
+  case ipAddr.family
+  of IPv4:
+    # IPv4 multicast addresses are defined by the leading address bits of 1110
+    let firstByte = ipAddr.address_v4[0].byte
+    return firstByte.shr(4) == 0x0E # 1110
+  of IPv6:
+    let firstByte = ipAddr.address_v6[0]
+    return firstByte == 0xFF 
+
+proc isMulticastAddress*(group: string): bool =
+  let ipAddr = parseIpAddress(group)
+  return ipAddr.isMulticastAddress()
 
 proc joinGroup*(socket: Socket, group: string, ttl = 255): bool = 
   ## Instructs the os kernel to join a multicast group.
@@ -76,7 +99,7 @@ proc enableBroadcast*(socket: Socket, enable: bool) =
   let broadcastEnable = if enable: 1 else: 0
   setsockoptint(socket.getFd(), SOL_SOCKET.int, SO_BROADCAST.int,  broadcastEnable);  
 
-when isMainModule:
+when false: # isMainModule:
   ## Bittorrent local peer discovery
   #const HELLO_PORT = 6771
   #const HELLO_GROUP = "239.192.152.143"
@@ -90,7 +113,6 @@ Host:239.255.255.250:1900
 ST:urn:schemas-upnp-org:device:InternetGatewayDevice:1
 Man:"ssdp:discover"
 MX:3""" & "\c\r\c\r" 
-
 
   const MSG_LEN = 1024
   var socket = newSocket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
@@ -117,3 +139,10 @@ MX:3""" & "\c\r\c\r"
   assert socket.leaveGroup(HELLO_GROUP) == true
   assert socket.leaveGroup(HELLO_GROUP) == false # cause we have left the group already
 
+when isMainModule:
+    doAssert "224.0.0.0".isMulticastAddress == true
+    doAssert "239.2.3.4".isMulticastAddress == true
+    doAssert "239.255.255.255".isMulticastAddress == true
+    doAssert "192.168.2.1".isMulticastAddress == false
+    doAssert "ff02::1".isMulticastAddress == true
+    doAssert "2001:0da0:0aab:12f1::aff1".isMulticastAddress == false
