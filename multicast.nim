@@ -8,18 +8,25 @@
 #
 ## procs to work with multicast groups and ip broadcast
 ## tested on windows and linux
-import net
-import os
-import nativesockets
+import net, os, nativesockets
+
+const IPPROTO_IP = 0.cint
+const IPPROTO_IPV6 = 41.cint
 
 when defined windows:
-  from winlean import In_Addr, inet_addr, setSockOpt, In6Addr, inet_pton
+  from winlean import In_Addr, inet_addr, setSockOpt# , # In6Addr
   # Old windows
   # const IP_ADD_MEMBERSHIP  = 5.cint
   # const IP_DROP_MEMBERSHIP = 6.cint 
   # const IP_MULTICAST_TTL = 3.cint
-
   # New windows
+  # TODO (my) mingw crosscompiler misses In6Addr so defined here
+  type
+    In6Addr = object
+      bytes: array[0..15, char]
+  #   In6Addr {.importc: "IN6_ADDR", header: "in6addr.h".} = object
+  #     bytes* {.importc: "u.Byte".}: array[0..15, char]
+
   const 
     IP_ADD_MEMBERSHIP  = 12.cint
     IP_DROP_MEMBERSHIP = 13.cint  
@@ -35,7 +42,6 @@ else:
     IP_MULTICAST_TTL = 33.cint
     # IPV6_JOIN_GROUP = 0 # TODO
     # IPV6_LEAVE_GROUP = 0 # TODO
-
 type 
   ip_mreq = object {.pure, final.}
     imr_multiaddr*: InAddr
@@ -44,19 +50,9 @@ type
     ipv6mr_multiaddr*: In6Addr ## IPv6 multicast address.
     ipv6mr_interface*: cint ## Interface index.    
 
-const IPPROTO_IP = 0.cint
-const IPPROTO_IPV6 = 41.cint
-
 proc isMulticastAddress*(ipAddr: IpAddress): bool =
   ## returns true wether the given IpAddress is a ipv4 or ipv6 multicast
   ## address, false otherwise
-  ## Examples:
-  ##
-  # runnableExamples:
-  #   doAssert "224.0.0.0".isMulticastAddress == true
-  #   doAssert "239.2.3.4".isMulticastAddress == true
-  #   doAssert "239.255.255.255".isMulticastAddress == true
-  #   doAssert "192.168.2.1".isMulticastAddress == false
   case ipAddr.family
   of IPv4:
     # IPv4 multicast addresses are defined by the leading address bits of 1110
@@ -67,6 +63,13 @@ proc isMulticastAddress*(ipAddr: IpAddress): bool =
     return firstByte == 0xFF 
 
 proc isMulticastAddress*(group: string): bool =
+  runnableExamples:
+    doAssert "224.0.0.0".isMulticastAddress == true
+    doAssert "239.2.3.4".isMulticastAddress == true
+    doAssert "239.255.255.255".isMulticastAddress == true
+    doAssert "192.168.2.1".isMulticastAddress == false
+    doAssert "ff02::1".isMulticastAddress == true
+    doAssert "2001:0da0:0aab:12f1::aff1".isMulticastAddress == false  
   let ipAddr = parseIpAddress(group)
   return ipAddr.isMulticastAddress()
 
@@ -75,16 +78,15 @@ proc joinGroup*(socket: Socket, ipAddr: IpAddress, ttl = 255): bool =
   ## returns true if sucessfull
   ## false otherwise
   ## 
-  ## Values for TTL:
-  ## 
-  ##   TTL     Scope
-  ## ----------------------------------------------------------------------
-  ##    0 Restricted to the same host. Won't be output by any interface.
-  ##    1 Restricted to the same subnet. Won't be forwarded by a router.
-  ##  <32 Restricted to the same site, organization or department.
-  ##  <64 Restricted to the same region.
-  ## <128 Restricted to the same continent.
-  ## <255 Unrestricted in scope. Global.
+  # Values for TTL:
+  #  TTL     Scope
+  # ----------------------------------------------------------------------
+  #    0 Restricted to the same host. Won't be output by any interface.
+  #    1 Restricted to the same subnet. Won't be forwarded by a router.
+  #  <32 Restricted to the same site, organization or department.
+  #  <64 Restricted to the same region.
+  # <128 Restricted to the same continent.
+  # <255 Unrestricted in scope. Global.
   case ipAddr.family
   of IPv4:
     var mreq = ip_mreq()
@@ -97,7 +99,10 @@ proc joinGroup*(socket: Socket, ipAddr: IpAddress, ttl = 255): bool =
     return true
   of IPv6:
     var mreq6 = ipv6_mreq()
-    mreq6.ipv6mr_multiaddr.s6_addr = cast[array[0..15, char]](ipAddr.address_v6)
+    when defined windows:
+      mreq6.ipv6mr_multiaddr.bytes = cast[array[0..15, char]](ipAddr.address_v6)
+    else:
+      mreq6.ipv6mr_multiaddr.s6_addr = cast[array[0..15, char]](ipAddr.address_v6)
     mreq6.ipv6mr_interface  = 0 # let os choose right interface; TODO?    
     var res = setSockOpt(socket.getFd(), IPPROTO_IPV6, IPV6_JOIN_GROUP, addr mreq6, sizeof(ipv6_mreq).SockLen)
     if res != 0: 
@@ -124,7 +129,10 @@ proc leaveGroup*(socket: Socket, ipAddr: IpAddress): bool =
     return true
   of IPv6:
     var mreq6 = ipv6_mreq()
-    mreq6.ipv6mr_multiaddr.s6_addr = cast[array[0..15, char]](ipAddr.address_v6)
+    when defined windows:
+      mreq6.ipv6mr_multiaddr.bytes = cast[array[0..15, char]](ipAddr.address_v6)
+    else:
+      mreq6.ipv6mr_multiaddr.s6_addr = cast[array[0..15, char]](ipAddr.address_v6)    
     mreq6.ipv6mr_interface =  0 # let os choose right interface; TODO?
     var res = setSockOpt(socket.getFd(), IPPROTO_IPV6, IPV6_LEAVE_GROUP, addr mreq6, sizeof(ipv6_mreq).SockLen)
     if res != 0: 
@@ -181,7 +189,6 @@ MX:3""" & "\c\r\c\r"
   assert socket.leaveGroup(HELLO_GROUP) == true
   assert socket.leaveGroup(HELLO_GROUP) == false # cause we have left the group already
 
-
 when isMainModule: # ipv6 test
   var socket = newSocket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP)
   socket.setSockOpt(OptReuseAddr, true)
@@ -205,11 +212,3 @@ when isMainModule: # ipv6 test
   echo socket.leaveGroup("ff02::2")
   while true:
       echo "R: ", socket.recvFrom(data, 1024, address, port ), " ", address,":", port, " " , data
-
-when isMainModule:
-    doAssert "224.0.0.0".isMulticastAddress == true
-    doAssert "239.2.3.4".isMulticastAddress == true
-    doAssert "239.255.255.255".isMulticastAddress == true
-    doAssert "192.168.2.1".isMulticastAddress == false
-    doAssert "ff02::1".isMulticastAddress == true
-    doAssert "2001:0da0:0aab:12f1::aff1".isMulticastAddress == false
