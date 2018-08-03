@@ -1,4 +1,4 @@
-# test useing asyncdispatch2 https://github.com/status-im/nim-asyncdispatch2
+# test for async udp useing asyncdispatch2 https://github.com/status-im/nim-asyncdispatch2
 
 import asyncdispatch2, nativesockets
 import ../multicast
@@ -22,12 +22,20 @@ proc main(): Future[void] {.async.} =
   data = new byte  
   var dsock4 = newDatagramTransport[byte](udp4DataAvailable, udata = data, local = ta)
 
+  # Join the multicast group
   if not SocketHandle(dsock4.fd).joinGroup(HELLO_GROUP.parseIpAddress()):
     echo "could not join multicast group"
 
+  # Also enable broadcast
+  SocketHandle(dsock4.fd).enableBroadcast true
+
+  var broadcast = initTAddress("255.255.255.255:" & $HELLO_PORT)
+  var bmsg = "b!!"
+  await dsock4.sendTo(broadcast, bmsg, sizeOf(bmsg)) 
+
   var other = initTAddress(HELLO_GROUP & ":" & $HELLO_PORT)
   var msg = "testmsg2"
-  await dsock4.sendTo(other, disc, disc.len())
+  await dsock4.sendTo(other, disc, sizeOf(disc)) 
 
 asyncCheck main()
 while true:
