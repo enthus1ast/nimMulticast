@@ -8,7 +8,7 @@
 #
 ## procs to work with multicast groups and ip broadcast
 ## tested on windows and linux
-import asyncnet
+# import asyncnet
 import net, os, nativesockets
 # export nativesockets # why is this neccessary?
 # from asyncnet import AsyncSocket, getFd
@@ -111,15 +111,15 @@ proc joinGroup*(fd: SocketHandle, ipAddr: IpAddress, ttl = 255): bool =
       return false
     return true
 
-proc joinGroup*(socket: Socket|AsyncSocket, ipAddr: IpAddress, ttl = 255): bool = 
+proc joinGroup*(socket: Socket, ipAddr: IpAddress, ttl = 255): bool = 
   return joinGroup(socket.getFd(), ipAddr, ttl)
 
-proc joinGroup*(socket: Socket|AsyncSocket, group: string, ttl = 255): bool = 
+proc joinGroup*(socket: Socket, group: string, ttl = 255): bool = 
   ## socket.joinGroup("239.2.3.4")
   let ipAddr = group.parseIpAddress()
   return socket.joinGroup(ipAddr, ttl)
 
-proc leaveGroup*(socket: Socket|AsyncSocket, ipAddr: IpAddress): bool =
+proc leaveGroup*(socket: Socket, ipAddr: IpAddress): bool =
   ## Instructs the os kernel to leave a multicast group.
   ## returns true if sucessfull
   ## false otherwise
@@ -144,17 +144,21 @@ proc leaveGroup*(socket: Socket|AsyncSocket, ipAddr: IpAddress): bool =
       return false
     return true
 
-proc leaveGroup*(socket: Socket|AsyncSocket, group: string): bool =
+proc leaveGroup*(socket: Socket, group: string): bool =
   ## socket.leaveGroup("239.2.3.4")
   let ipAddr = group.parseIpAddress()
   return socket.leaveGroup(ipAddr)
 
-proc enableBroadcast*(socket: Socket|AsyncSocket, enable: bool) =
+proc enableBroadcast*(fd: SocketHandle, enable: bool) =
   ## enables the socket for broadcast
   let broadcastEnable = if enable: 1 else: 0
-  setsockoptint(socket.getFd(), SOL_SOCKET.int, SO_BROADCAST.int,  broadcastEnable);  
+  setsockoptint(fd, SOL_SOCKET.int, SO_BROADCAST.int,  broadcastEnable);  
 
-when isMainModule and false: # ipv4 test
+proc enableBroadcast*(socket: Socket, enable: bool) =
+  socket.getFd.enableBroadcast(enable)
+
+
+when isMainModule and true: # ipv4 test
   ## Bittorrent local peer discovery
   #const HELLO_PORT = 6771
   #const HELLO_GROUP = "239.192.152.143"
@@ -194,7 +198,7 @@ MX:3""" & "\c\r\c\r"
   assert socket.leaveGroup(HELLO_GROUP) == true
   assert socket.leaveGroup(HELLO_GROUP) == false # cause we have left the group already
 
-when isMainModule and true: # ipv6 test
+when isMainModule and false: # ipv6 test
   var socket = newSocket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP)
   socket.setSockOpt(OptReuseAddr, true)
   # socket.bindAddr(Port(1900), "2003:eb:dbc0:e595:3ea9:f4ff:fe6e:e930")
