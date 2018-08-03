@@ -8,7 +8,10 @@
 #
 ## procs to work with multicast groups and ip broadcast
 ## tested on windows and linux
+import asyncnet
 import net, os, nativesockets
+# export nativesockets # why is this neccessary?
+# from asyncnet import AsyncSocket, getFd
 
 const IPPROTO_IP = 0.cint
 const IPPROTO_IPV6 = 41.cint
@@ -24,9 +27,6 @@ when defined windows:
   type
     In6Addr = object
       bytes: array[0..15, char]
-  #   In6Addr {.importc: "IN6_ADDR", header: "in6addr.h".} = object
-  #     bytes* {.importc: "u.Byte".}: array[0..15, char]
-
   const 
     IP_ADD_MEMBERSHIP  = 12.cint
     IP_DROP_MEMBERSHIP = 13.cint  
@@ -73,7 +73,9 @@ proc isMulticastAddress*(group: string): bool =
   let ipAddr = parseIpAddress(group)
   return ipAddr.isMulticastAddress()
 
-proc joinGroup*(socket: Socket, ipAddr: IpAddress, ttl = 255): bool = 
+
+
+proc joinGroup*(fd: SocketHandle, ipAddr: IpAddress, ttl = 255): bool = 
   ## Instructs the os kernel to join a multicast group.
   ## returns true if sucessfull
   ## false otherwise
@@ -92,10 +94,10 @@ proc joinGroup*(socket: Socket, ipAddr: IpAddress, ttl = 255): bool =
     var mreq = ip_mreq()
     mreq.imr_multiaddr.s_addr = inet_addr($ipAddr)
     mreq.imr_interface.s_addr= htonl(INADDR_ANY)
-    var res = setSockOpt(socket.getFd(), IPPROTO_IP, IP_ADD_MEMBERSHIP, addr mreq, sizeof(ip_mreq).SockLen)
+    var res = setSockOpt(fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, addr mreq, sizeof(ip_mreq).SockLen)
     if res != 0: 
       return false
-    socket.getFd().setSockOptInt(IPPROTO_IP, IP_MULTICAST_TTL, ttl)
+    fd.setSockOptInt(IPPROTO_IP, IP_MULTICAST_TTL, ttl)
     return true
   of IPv6:
     var mreq6 = ipv6_mreq()
@@ -104,17 +106,20 @@ proc joinGroup*(socket: Socket, ipAddr: IpAddress, ttl = 255): bool =
     else:
       mreq6.ipv6mr_multiaddr.s6_addr = cast[array[0..15, char]](ipAddr.address_v6)
     mreq6.ipv6mr_interface  = 0 # let os choose right interface; TODO?    
-    var res = setSockOpt(socket.getFd(), IPPROTO_IPV6, IPV6_JOIN_GROUP, addr mreq6, sizeof(ipv6_mreq).SockLen)
+    var res = setSockOpt(fd, IPPROTO_IPV6, IPV6_JOIN_GROUP, addr mreq6, sizeof(ipv6_mreq).SockLen)
     if res != 0: 
       return false
     return true
 
-proc joinGroup*(socket: Socket, group: string, ttl = 255): bool = 
+proc joinGroup*(socket: Socket|AsyncSocket, ipAddr: IpAddress, ttl = 255): bool = 
+  return joinGroup(socket.getFd(), ipAddr, ttl)
+
+proc joinGroup*(socket: Socket|AsyncSocket, group: string, ttl = 255): bool = 
   ## socket.joinGroup("239.2.3.4")
   let ipAddr = group.parseIpAddress()
   return socket.joinGroup(ipAddr, ttl)
 
-proc leaveGroup*(socket: Socket, ipAddr: IpAddress): bool =
+proc leaveGroup*(socket: Socket|AsyncSocket, ipAddr: IpAddress): bool =
   ## Instructs the os kernel to leave a multicast group.
   ## returns true if sucessfull
   ## false otherwise
@@ -122,7 +127,7 @@ proc leaveGroup*(socket: Socket, ipAddr: IpAddress): bool =
   of IPv4:  
     var mreq = ip_mreq()
     mreq.imr_multiaddr.s_addr = inet_addr($ipAddr)
-    mreq.imr_interface.s_addr= htonl(INADDR_ANY)
+    mreq.imr_interface.s_addr = htonl(INADDR_ANY)
     var res = setSockOpt(socket.getFd(), IPPROTO_IP, IP_DROP_MEMBERSHIP, addr mreq, sizeof(ip_mreq).SockLen)
     if res != 0: 
       return false
@@ -139,17 +144,17 @@ proc leaveGroup*(socket: Socket, ipAddr: IpAddress): bool =
       return false
     return true
 
-proc leaveGroup*(socket: Socket, group: string): bool =
+proc leaveGroup*(socket: Socket|AsyncSocket, group: string): bool =
   ## socket.leaveGroup("239.2.3.4")
   let ipAddr = group.parseIpAddress()
   return socket.leaveGroup(ipAddr)
 
-proc enableBroadcast*(socket: Socket, enable: bool) =
+proc enableBroadcast*(socket: Socket|AsyncSocket, enable: bool) =
   ## enables the socket for broadcast
   let broadcastEnable = if enable: 1 else: 0
   setsockoptint(socket.getFd(), SOL_SOCKET.int, SO_BROADCAST.int,  broadcastEnable);  
 
-when false: # isMainModule : # ipv4 test
+when isMainModule and false: # ipv4 test
   ## Bittorrent local peer discovery
   #const HELLO_PORT = 6771
   #const HELLO_GROUP = "239.192.152.143"
@@ -189,7 +194,7 @@ MX:3""" & "\c\r\c\r"
   assert socket.leaveGroup(HELLO_GROUP) == true
   assert socket.leaveGroup(HELLO_GROUP) == false # cause we have left the group already
 
-when isMainModule: # ipv6 test
+when isMainModule and true: # ipv6 test
   var socket = newSocket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP)
   socket.setSockOpt(OptReuseAddr, true)
   # socket.bindAddr(Port(1900), "2003:eb:dbc0:e595:3ea9:f4ff:fe6e:e930")
@@ -208,7 +213,7 @@ when isMainModule: # ipv6 test
     port: Port
 
   echo socket.sendTo("ff02::2", Port 1900, "TESTDATA")
-  sleep 5000
+  sleep 1000
   echo socket.leaveGroup("ff02::2")
   while true:
       echo "R: ", socket.recvFrom(data, 1024, address, port ), " ", address,":", port, " " , data
