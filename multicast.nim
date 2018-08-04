@@ -28,8 +28,8 @@ when defined windows:
     IP_ADD_MEMBERSHIP  = 12
     IP_DROP_MEMBERSHIP = 13
     IP_MULTICAST_TTL = 10
-    IPV6_JOIN_GROUP = 12 # TODO
-    IPV6_LEAVE_GROUP = 13 # TODO
+    IPV6_JOIN_GROUP = 12 # TODO ipv6 needs testing
+    IPV6_LEAVE_GROUP = 13 # TODO ipv6 needs testing
 else:
   from posix import In_Addr, inet_addr, setSockOpt, In6Addr, 
     IPV6_JOIN_GROUP, IPV6_LEAVE_GROUP, inet_pton # , Tipv6_mreq
@@ -37,8 +37,8 @@ else:
     IP_ADD_MEMBERSHIP  = 35
     IP_DROP_MEMBERSHIP = 36
     IP_MULTICAST_TTL = 33
-    # IPV6_JOIN_GROUP = 0 # TODO
-    # IPV6_LEAVE_GROUP = 0 # TODO
+    # IPV6_JOIN_GROUP = 0 # TODO ipv6 needs testing
+    # IPV6_LEAVE_GROUP = 0 # TODO ipv6 needs testing
 type 
   ip_mreq = object {.pure, final.}
     imr_multiaddr*: InAddr
@@ -102,9 +102,7 @@ proc joinGroup*(fd: SocketHandle, ipAddr: IpAddress, ttl = 255): bool =
       mreq6.ipv6mr_multiaddr.s6_addr = cast[array[0..15, char]](ipAddr.address_v6)
     mreq6.ipv6mr_interface  = 0 # let os choose right interface; TODO?    
     var res = setSockOpt(fd, IPPROTO_IPV6, IPV6_JOIN_GROUP, addr mreq6, sizeof(ipv6_mreq).SockLen)
-    if res != 0: 
-      return false
-    return true
+    return res == 0 
 
 proc joinGroup*(socket: Socket, ipAddr: IpAddress, ttl = 255): bool = 
   return joinGroup(socket.getFd(), ipAddr, ttl)
@@ -124,9 +122,7 @@ proc leaveGroup*(socket: Socket, ipAddr: IpAddress): bool =
     mreq.imr_multiaddr.s_addr = inet_addr($ipAddr)
     mreq.imr_interface.s_addr = htonl(INADDR_ANY)
     var res = setSockOpt(socket.getFd(), IPPROTO_IP, IP_DROP_MEMBERSHIP, addr mreq, sizeof(ip_mreq).SockLen)
-    if res != 0: 
-      return false
-    return true
+    return res == 0 
   of IPv6:
     var mreq6 = ipv6_mreq()
     when defined windows:
@@ -135,9 +131,7 @@ proc leaveGroup*(socket: Socket, ipAddr: IpAddress): bool =
       mreq6.ipv6mr_multiaddr.s6_addr = cast[array[0..15, char]](ipAddr.address_v6)    
     mreq6.ipv6mr_interface =  0 # let os choose right interface; TODO?
     var res = setSockOpt(socket.getFd(), IPPROTO_IPV6, IPV6_LEAVE_GROUP, addr mreq6, sizeof(ipv6_mreq).SockLen)
-    if res != 0: 
-      return false
-    return true
+    return res == 0
 
 proc leaveGroup*(socket: Socket, group: string): bool =
   ## socket.leaveGroup("239.2.3.4")
