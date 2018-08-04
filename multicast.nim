@@ -8,38 +8,35 @@
 #
 ## procs to work with multicast groups and ip broadcast
 ## tested on windows and linux
-# import asyncnet
 import net, os, nativesockets
-# export nativesockets # why is this neccessary?
-# from asyncnet import AsyncSocket, getFd
 
-const IPPROTO_IP = 0.cint
-const IPPROTO_IPV6 = 41.cint
+const IPPROTO_IP = 0
+const IPPROTO_IPV6 = 41
 
 when defined windows:
   from winlean import In_Addr, inet_addr, setSockOpt# , # In6Addr
   # Old windows
-  # const IP_ADD_MEMBERSHIP  = 5.cint
-  # const IP_DROP_MEMBERSHIP = 6.cint 
-  # const IP_MULTICAST_TTL = 3.cint
+  # const IP_ADD_MEMBERSHIP  = 5
+  # const IP_DROP_MEMBERSHIP = 6 
+  # const IP_MULTICAST_TTL = 3
   # New windows
   # TODO (my) mingw crosscompiler misses In6Addr so defined here
   type
     In6Addr = object
       bytes: array[0..15, char]
   const 
-    IP_ADD_MEMBERSHIP  = 12.cint
-    IP_DROP_MEMBERSHIP = 13.cint  
-    IP_MULTICAST_TTL = 10.cint  
-    IPV6_JOIN_GROUP = 12.cint # TODO
-    IPV6_LEAVE_GROUP = 13.cint # TODO
+    IP_ADD_MEMBERSHIP  = 12
+    IP_DROP_MEMBERSHIP = 13
+    IP_MULTICAST_TTL = 10
+    IPV6_JOIN_GROUP = 12 # TODO
+    IPV6_LEAVE_GROUP = 13 # TODO
 else:
   from posix import In_Addr, inet_addr, setSockOpt, In6Addr, 
     IPV6_JOIN_GROUP, IPV6_LEAVE_GROUP, inet_pton # , Tipv6_mreq
   const
-    IP_ADD_MEMBERSHIP  = 35.cint
-    IP_DROP_MEMBERSHIP = 36.cint  
-    IP_MULTICAST_TTL = 33.cint
+    IP_ADD_MEMBERSHIP  = 35
+    IP_DROP_MEMBERSHIP = 36
+    IP_MULTICAST_TTL = 33
     # IPV6_JOIN_GROUP = 0 # TODO
     # IPV6_LEAVE_GROUP = 0 # TODO
 type 
@@ -72,8 +69,6 @@ proc isMulticastAddress*(group: string): bool =
     doAssert "2001:0da0:0aab:12f1::aff1".isMulticastAddress == false  
   let ipAddr = parseIpAddress(group)
   return ipAddr.isMulticastAddress()
-
-
 
 proc joinGroup*(fd: SocketHandle, ipAddr: IpAddress, ttl = 255): bool = 
   ## Instructs the os kernel to join a multicast group.
@@ -156,68 +151,3 @@ proc enableBroadcast*(fd: SocketHandle, enable: bool) =
 
 proc enableBroadcast*(socket: Socket, enable: bool) =
   socket.getFd.enableBroadcast(enable)
-
-
-when isMainModule and true: # ipv4 test
-  ## Bittorrent local peer discovery
-  #const HELLO_PORT = 6771
-  #const HELLO_GROUP = "239.192.152.143"
-
-  ## upnp router discovery
-  const HELLO_PORT = 1900
-  const HELLO_GROUP = "239.255.255.250"
-
-  var disc = """M-SEARCH * HTTP/1.1
-Host:239.255.255.250:1900
-ST:urn:schemas-upnp-org:device:InternetGatewayDevice:1
-Man:"ssdp:discover"
-MX:3""" & "\c\r\c\r" 
-
-  const MSG_LEN = 1024
-  var socket = newSocket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
-  socket.setSockOpt(OptReuseAddr, true)
-  socket.bindAddr(Port(HELLO_PORT))
-
-  if not socket.joinGroup(HELLO_GROUP):
-    echo "could not join multicast group"
-
-  socket.enableBroadcast true
-  echo "enabled broadcast for the socket"
-
-  var 
-    data: string = ""
-    address: string = ""
-    port: Port
-
-  discard socket.sendTo(HELLO_GROUP, Port(HELLO_PORT), disc)
-  discard socket.sendTo("255.255.255.255", Port(HELLO_PORT),  disc & "\nBROADCAST: truefoo")
-  # for idx in 0..1
-  while true:
-    echo "R: ", socket.recvFrom(data, MSG_LEN, address, port ), " ", address,":", port, " " , data
-
-  assert socket.leaveGroup(HELLO_GROUP) == true
-  assert socket.leaveGroup(HELLO_GROUP) == false # cause we have left the group already
-
-when isMainModule and false: # ipv6 test
-  var socket = newSocket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP)
-  socket.setSockOpt(OptReuseAddr, true)
-  # socket.bindAddr(Port(1900), "2003:eb:dbc0:e595:3ea9:f4ff:fe6e:e930")
-  # socket.bindAddr(Port(1900), "::")
-  socket.bindAddr(Port(1900), "::")
-  # socket.bindAddr(Port(1900))
-
-  if not socket.joinGroup("ff02::2"):  
-    echo "could not join multicast group"
-  else:
-    echo "joined ipv6 multicast group!"
-
-  var 
-    data: string = ""
-    address: string = ""
-    port: Port
-
-  echo socket.sendTo("ff02::2", Port 1900, "TESTDATA")
-  sleep 1000
-  echo socket.leaveGroup("ff02::2")
-  while true:
-      echo "R: ", socket.recvFrom(data, 1024, address, port ), " ", address,":", port, " " , data
