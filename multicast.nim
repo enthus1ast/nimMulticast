@@ -52,7 +52,6 @@ proc isMulticastAddress*(ipAddr: IpAddress): bool =
   ## address, false otherwise
   case ipAddr.family
   of IPv4:
-    # IPv4 multicast addresses are defined by the leading address bits of 1110
     let firstByte = ipAddr.address_v4[0].byte
     return firstByte.shr(4) == 0x0E # 1110
   of IPv6:
@@ -60,13 +59,6 @@ proc isMulticastAddress*(ipAddr: IpAddress): bool =
     return firstByte == 0xFF 
 
 proc isMulticastAddress*(group: string): bool =
-  runnableExamples:
-    doAssert "224.0.0.0".isMulticastAddress == true
-    doAssert "239.2.3.4".isMulticastAddress == true
-    doAssert "239.255.255.255".isMulticastAddress == true
-    doAssert "192.168.2.1".isMulticastAddress == false
-    doAssert "ff02::1".isMulticastAddress == true
-    doAssert "2001:0da0:0aab:12f1::aff1".isMulticastAddress == false  
   let ipAddr = parseIpAddress(group)
   return ipAddr.isMulticastAddress()
 
@@ -112,7 +104,7 @@ proc joinGroup*(socket: Socket, group: string, ttl = 255): bool =
   let ipAddr = group.parseIpAddress()
   return socket.joinGroup(ipAddr, ttl)
 
-proc leaveGroup*(socket: Socket, ipAddr: IpAddress): bool =
+proc leaveGroup*(fd: SocketHandle, ipAddr: IpAddress): bool =
   ## Instructs the os kernel to leave a multicast group.
   ## returns true if sucessfull
   ## false otherwise
@@ -121,7 +113,7 @@ proc leaveGroup*(socket: Socket, ipAddr: IpAddress): bool =
     var mreq = ip_mreq()
     mreq.imr_multiaddr.s_addr = inet_addr($ipAddr)
     mreq.imr_interface.s_addr = htonl(INADDR_ANY)
-    var res = setSockOpt(socket.getFd(), IPPROTO_IP, IP_DROP_MEMBERSHIP, addr mreq, sizeof(ip_mreq).SockLen)
+    var res = setSockOpt(fd, IPPROTO_IP, IP_DROP_MEMBERSHIP, addr mreq, sizeof(ip_mreq).SockLen)
     return res == 0 
   of IPv6:
     var mreq6 = ipv6_mreq()
@@ -130,8 +122,11 @@ proc leaveGroup*(socket: Socket, ipAddr: IpAddress): bool =
     else:
       mreq6.ipv6mr_multiaddr.s6_addr = cast[array[0..15, char]](ipAddr.address_v6)    
     mreq6.ipv6mr_interface =  0 # let os choose right interface; TODO?
-    var res = setSockOpt(socket.getFd(), IPPROTO_IPV6, IPV6_LEAVE_GROUP, addr mreq6, sizeof(ipv6_mreq).SockLen)
+    var res = setSockOpt(fd, IPPROTO_IPV6, IPV6_LEAVE_GROUP, addr mreq6, sizeof(ipv6_mreq).SockLen)
     return res == 0
+
+proc leaveGroup*(socket: Socket, ipAddr: IpAddress): bool =
+  return leaveGroup(socket.getFd(), ipAddr)
 
 proc leaveGroup*(socket: Socket, group: string): bool =
   ## socket.leaveGroup("239.2.3.4")
@@ -145,3 +140,11 @@ proc enableBroadcast*(fd: SocketHandle, enable: bool) =
 
 proc enableBroadcast*(socket: Socket, enable: bool) =
   socket.getFd.enableBroadcast(enable)
+
+when isMainModule:
+  assert "224.0.0.0".isMulticastAddress == true
+  assert "239.2.3.4".isMulticastAddress == true
+  assert "239.255.255.255".isMulticastAddress == true
+  assert "192.168.2.1".isMulticastAddress == false
+  assert "ff02::1".isMulticastAddress == true
+  assert "2001:0da0:0aab:12f1::aff1".isMulticastAddress == false  
