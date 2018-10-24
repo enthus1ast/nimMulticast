@@ -51,10 +51,10 @@ proc isMulticastAddress*(ipAddr: IpAddress): bool =
   ## returns true wether the given IpAddress is a ipv4 or ipv6 multicast
   ## address, false otherwise
   case ipAddr.family
-  of IPv4:
+  of IpAddressFamily.IPv4:
     let firstByte = ipAddr.address_v4[0].byte
     return firstByte.shr(4) == 0x0E # 1110
-  of IPv6:
+  of IpAddressFamily.IPv6:
     let firstByte = ipAddr.address_v6[0]
     return firstByte == 0xFF 
 
@@ -77,7 +77,7 @@ proc joinGroup*(fd: SocketHandle, ipAddr: IpAddress, ttl = 255): bool =
   # <128 Restricted to the same continent.
   # <255 Unrestricted in scope. Global.
   case ipAddr.family
-  of IPv4:
+  of IpAddressFamily.IPv4:
     var mreq = ip_mreq()
     mreq.imr_multiaddr.s_addr = inet_addr($ipAddr)
     mreq.imr_interface.s_addr= htonl(INADDR_ANY)
@@ -86,7 +86,7 @@ proc joinGroup*(fd: SocketHandle, ipAddr: IpAddress, ttl = 255): bool =
       return false
     fd.setSockOptInt(IPPROTO_IP, IP_MULTICAST_TTL, ttl)
     return true
-  of IPv6:
+  of IpAddressFamily.IPv6:
     var mreq6 = ipv6_mreq()
     when defined windows:
       mreq6.ipv6mr_multiaddr.bytes = cast[array[0..15, char]](ipAddr.address_v6)
@@ -109,13 +109,13 @@ proc leaveGroup*(fd: SocketHandle, ipAddr: IpAddress): bool =
   ## returns true if sucessfull
   ## false otherwise
   case ipAddr.family
-  of IPv4:  
+  of IpAddressFamily.IPv4:  
     var mreq = ip_mreq()
     mreq.imr_multiaddr.s_addr = inet_addr($ipAddr)
     mreq.imr_interface.s_addr = htonl(INADDR_ANY)
     var res = setSockOpt(fd, IPPROTO_IP, IP_DROP_MEMBERSHIP, addr mreq, sizeof(ip_mreq).SockLen)
     return res == 0 
-  of IPv6:
+  of IpAddressFamily.IPv6:
     var mreq6 = ipv6_mreq()
     when defined windows:
       mreq6.ipv6mr_multiaddr.bytes = cast[array[0..15, char]](ipAddr.address_v6)
