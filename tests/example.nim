@@ -32,8 +32,8 @@ MX:3""" & "\c\r\c\r"
     address: string = ""
     port: Port
 
-  discard socket.sendTo(HELLO_GROUP, Port(HELLO_PORT), disc)
-  discard socket.sendTo("255.255.255.255", Port(HELLO_PORT),  disc & "\nBROADCAST: truefoo")
+  socket.sendTo(HELLO_GROUP, Port(HELLO_PORT), disc)
+  socket.sendTo("255.255.255.255", Port(HELLO_PORT),  disc & "\nBROADCAST: truefoo")
   # for idx in 0..1
   while true:
     echo "R: ", socket.recvFrom(data, MSG_LEN, address, port ), " ", address,":", port, " " , data

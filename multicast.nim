@@ -33,17 +33,18 @@ when defined windows:
 else:
   from posix import In_Addr, inet_addr, setSockOpt, In6Addr, 
     IPV6_JOIN_GROUP, IPV6_LEAVE_GROUP, inet_pton # , Tipv6_mreq
-  when defined(freebsd) or defined(macos):
+  when defined(FreeBSD) or defined(MacOS) or defined(MacOSX): # TODO check if MacOSX is needet here.
     const
       ## FreeBSD (and macos?)
       # https://github.com/freebsd/freebsd/blob/1d6e4247415d264485ee94b59fdbc12e0c566fd0/sys/netinet/in.h
       IP_ADD_MEMBERSHIP = 12
       IP_DROP_MEMBERSHIP = 13
+      IP_MULTICAST_TTL = 10
       ## https://github.com/freebsd/freebsd/blob/5e6a2783683f47fa04731bd29ae2c797fc66b8a5/sys/netinet6/in6.h
       IPV6_JOIN_GROUP = 12
       IPV6_LEAVE_GROUP  = 13
   else:
-    const
+    const # TODO check https://github.com/torvalds/linux/blob/master/include/uapi/linux/in6.h
       IP_ADD_MEMBERSHIP  = 35
       IP_DROP_MEMBERSHIP = 36
       IP_MULTICAST_TTL = 33
@@ -157,4 +158,4 @@ when isMainModule:
   assert "239.255.255.255".isMulticastAddress == true
   assert "192.168.2.1".isMulticastAddress == false
   assert "ff02::1".isMulticastAddress == true
-  assert "2001:0da0:0aab:12f1::aff1".isMulticastAddress == false  
+  assert "2001:0da0:0aab:12f1::aff1".isMulticastAddress == false
