@@ -33,7 +33,7 @@ MX:3""" & "\c\r\c\r"
     port: Port
 
   socket.sendTo(HELLO_GROUP, Port(HELLO_PORT), disc)
-  socket.sendTo("255.255.255.255", Port(HELLO_PORT),  disc & "\nBROADCAST: truefoo")
+  socket.sendTo("255.255.255.255", Port(HELLO_PORT),  disc & "\nBROADCAST: truefoo") # 192.168.2.255 for freebsd?
   # for idx in 0..1
   while true:
     echo "R: ", socket.recvFrom(data, MSG_LEN, address, port ), " ", address,":", port, " " , data

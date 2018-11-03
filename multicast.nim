@@ -146,6 +146,8 @@ proc leaveGroup*(socket: Socket, group: string): bool =
 
 proc enableBroadcast*(fd: SocketHandle, enable: bool) =
   ## enables the socket for broadcast
+  ## some systems (linux, windows) allow sending to the global broadcast (255.255.255.255)
+  ## while others (freebsd) only allow sending to the more specific broadcast eg 192.168.2.255
   let broadcastEnable = if enable: 1 else: 0
   setsockoptint(fd, SOL_SOCKET.int, SO_BROADCAST.int,  broadcastEnable);  
 
