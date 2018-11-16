@@ -7,7 +7,7 @@
 #    distribution, for details about the copyright.
 #
 ## procs to work with multicast groups and ip broadcast
-## tested on windows and linux
+## tested on linux, windows and freebsd
 import net, os, nativesockets
 
 const IPPROTO_IP = 0
