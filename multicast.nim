@@ -8,7 +8,7 @@
 #
 ## procs to work with multicast groups and ip broadcast
 ## tested on linux, windows and freebsd
-import net, os, nativesockets, asyncnet
+import net, nativesockets, asyncnet
 
 const IPPROTO_IP = 0
 const IPPROTO_IPV6 = 41
@@ -51,10 +51,10 @@ else:
       # IPV6_JOIN_GROUP = 0 # TODO ipv6 needs testing
       # IPV6_LEAVE_GROUP = 0 # TODO ipv6 needs testing
 type
-  ip_mreq = object {.pure, final.}
+  ip_mreq {.pure, final.} = object
     imr_multiaddr*: InAddr
     imr_interface*: InAddr
-  ipv6_mreq = object {.pure, final.} # there is in posix but missing in winlean!
+  ipv6_mreq {.pure, final.} = object  # there is in posix but missing in winlean!
     ipv6mr_multiaddr*: In6Addr ## IPv6 multicast address.
     ipv6mr_interface*: cint ## Interface index.
 
