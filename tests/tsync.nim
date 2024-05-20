@@ -16,7 +16,7 @@ if not socket.joinGroup(HELLO_GROUP):
 socket.enableBroadcast true
 echo "enabled broadcast for the socket"
 
-discard socket.sendTo(HELLO_GROUP, Port(HELLO_PORT), TEST_MSG)
+socket.sendTo(HELLO_GROUP, Port(HELLO_PORT), TEST_MSG)
 
 var 
   data: string = ""
